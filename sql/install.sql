@@ -15,8 +15,7 @@ CREATE TABLE IF NOT EXISTS `0_ksf_supplier_moq_rules` (
     INDEX `idx_supplier` (`supplier_id`),
     INDEX `idx_stock` (`stock_id`),
     INDEX `idx_manufacturer` (`manufacturer_id`),
-    INDEX `idx_effective` (`effective_from`, `effective_to`),
-    CONSTRAINT `fk_moq_supplier` FOREIGN KEY (`supplier_id`) REFERENCES `0_suppliers` (`supplier_id`) ON DELETE CASCADE
+    INDEX `idx_effective` (`effective_from`, `effective_to`)
 ) ENGINE=InnoDB;
 
 -- Consolidation Groups (batches multiple suggested POs)
@@ -58,8 +57,7 @@ CREATE TABLE IF NOT EXISTS `0_ksf_consolidation_lines` (
     `expected_delivery_date` DATE NULL,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX `idx_group` (`group_id`),
-    INDEX `idx_stock` (`stock_id`),
-    CONSTRAINT `fk_consol_line_group` FOREIGN KEY (`group_id`) REFERENCES `0_ksf_consolidation_groups` (`id`) ON DELETE CASCADE
+    INDEX `idx_stock` (`stock_id`)
 ) ENGINE=InnoDB;
 
 -- Consolidation Recommendations (for display/review)

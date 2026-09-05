@@ -3,54 +3,41 @@ declare(strict_types=1);
 
 define('SS_ksf_FA_ManufacturerConsolidation', 150 << 8);
 
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+}
+
+$composerDepsPath = dirname(__DIR__) . '/ksf_FA_Common/src/Utils/ComposerDependencies.php';
+if (file_exists($composerDepsPath)) {
+    require_once $composerDepsPath;
+    \ksfraser\FrontAccounting\Common\Utils\ComposerDependencies::ensure(__DIR__);
+}
+
 class hooks_ksf_FA_ManufacturerConsolidation extends hooks
 {
     var $module_name = 'ksf_FA_ManufacturerConsolidation';
     var $version = '2.4.19-1.0.0';
 
-    function install_extension($check_only=true)
-    {
-        if (!$check_only) {
-            $this->_ensureComposerDependencies();
-        }
-        return true;
-    }
-
     function activate_extension($company, $check_only=true)
     {
-        if ($check_only) {
+        if (!file_exists(dirname(__FILE__) . '/sql/install.sql')) {
             return true;
         }
 
-        $autoload = __DIR__ . '/vendor/autoload.php';
-        if (file_exists($autoload)) {
-            require_once $autoload;
-        }
+        $updates = array(
+            'install.sql' => array(
+                'ksf_supplier_moq_rules',
+                'ksf_consolidation_groups',
+                'ksf_consolidation_lines',
+                'ksf_consolidation_recommendations',
+            ),
+        );
 
-        $sqlFile = __DIR__ . '/sql/install.sql';
-        if (file_exists($sqlFile)) {
-            $sql = file_get_contents($sqlFile);
-            $sql = str_replace('0_', get_company_preference($company)['_prefix'], $sql);
-            run_db_import($sql, $company);
-        }
-
-        add_security_section(SS_ksf_FA_ManufacturerConsolidation, 'Manufacturer Consolidation', 'SA_INVENTORY');
-        return true;
+        return $this->update_databases($company, $updates, $check_only);
     }
 
     function deactivate_extension($company, $check_only=true)
     {
-        if ($check_only) {
-            return true;
-        }
-
-        $uninstallFile = __DIR__ . '/sql/uninstall.sql';
-        if (file_exists($uninstallFile)) {
-            $sql = file_get_contents($uninstallFile);
-            run_db_import($sql, $company);
-        }
-
-        remove_security_section(SS_ksf_FA_ManufacturerConsolidation);
         return true;
     }
 
@@ -104,16 +91,12 @@ class hooks_ksf_FA_ManufacturerConsolidation extends hooks
         }
     }
 
-    /**
-     * Cron hook: nightly_recalc - check for MOQ gaps and generate recommendations.
-     *
-     * @param array &$data
-     *
-     * @since 1.0.0
-     */
     function nightly_recalc(array &$data)
     {
         $handler = $this->getHandler();
+        if ($handler === null) {
+            return;
+        }
         $handler->checkMoqGaps();
 
         $data['consolidation_data'] = $handler->getPendingRecommendations();
@@ -122,56 +105,33 @@ class hooks_ksf_FA_ManufacturerConsolidation extends hooks
         hook_invoke_all('consolidation_data', $data);
     }
 
-    /**
-     * Listen for suggested_po_approved hook.
-     *
-     * @param array &$data {
-     *     @var int $suggested_order_id
-     *     @var int $supplier_id
-     *     @var array $lines
-     * }
-     *
-     * @since 1.0.0
-     */
     function suggested_po_approved(array &$data): void
     {
         $handler = $this->getHandler();
+        if ($handler === null) {
+            return;
+        }
         $handler->evaluateForConsolidation($data);
     }
 
-    /**
-     * Listen for stock_turnover_data from StockTurnover module.
-     *
-     * @param array &$data
-     *
-     * @since 1.0.0
-     */
     function stock_turnover_data(array &$data): void
     {
         $handler = $this->getHandler();
+        if ($handler === null) {
+            return;
+        }
         $handler->updateFromTurnoverData($data);
     }
 
-    /**
-     * Listen for po_tracking_data from PurchaseOrderTracking module.
-     *
-     * @param array &$data
-     *
-     * @since 1.0.0
-     */
     function po_tracking_data(array &$data): void
     {
         $handler = $this->getHandler();
+        if ($handler === null) {
+            return;
+        }
         $handler->updateFromPoTrackingData($data);
     }
 
-    /**
-     * Broadcast consolidation_suggested hook.
-     *
-     * @param array $recommendations
-     *
-     * @since 1.0.0
-     */
     public function broadcastConsolidationSuggested(array $recommendations): void
     {
         $data = [
@@ -184,12 +144,16 @@ class hooks_ksf_FA_ManufacturerConsolidation extends hooks
         hook_invoke_all('consolidation_suggested', $data);
     }
 
-    private function getHandler(): \Ksfraser\FrontAccounting\ManufacturerConsolidation\ConsolidationHandler
+    private function getHandler()
     {
         static $handler = null;
 
         if ($handler !== null) {
             return $handler;
+        }
+
+        if (!class_exists('\Ksfraser\FrontAccounting\ManufacturerConsolidation\ConsolidationHandler')) {
+            return null;
         }
 
         $db = new \ksfraser\CommonDb\Adapter\FaDbAdapter(TB_PREF);
@@ -199,23 +163,17 @@ class hooks_ksf_FA_ManufacturerConsolidation extends hooks
         return $handler;
     }
 
-    private function _ensureComposerDependencies(): void
+    function install_access()
     {
-        $composerDepsPath = dirname(__DIR__) . '/ksf_FA_Common/src/Utils/ComposerDependencies.php';
-        if (file_exists($composerDepsPath)) {
-            require_once $composerDepsPath;
-            \ksfraser\FrontAccounting\Common\Utils\ComposerDependencies::ensure(__DIR__);
-        }
-    }
-
-    function hook_invoke_all($hook, &$data)
-    {
-        $autoload = __DIR__ . '/vendor/autoload.php';
-        if (!file_exists($autoload)) {
-            return null;
-        }
-        require_once $autoload;
-
-        return parent::hook_invoke_all($hook, $data);
+        $security_sections[SS_ksf_FA_ManufacturerConsolidation] = _("Manufacturer Consolidation");
+        $security_areas['SA_ksf_FA_MFG_CONS'] = array(
+            SS_ksf_FA_ManufacturerConsolidation | 1,
+            _("Manage Manufacturer Consolidation")
+        );
+        $security_areas['SA_ksf_FA_MFG_CONS_VIEW'] = array(
+            SS_ksf_FA_ManufacturerConsolidation | 2,
+            _("View Manufacturer Consolidation")
+        );
+        return array($security_areas, $security_sections);
     }
 }
