@@ -103,6 +103,16 @@ class ConsolidationRecommendationDTO
         return $this->id;
     }
 
+    public function getAdditionalCost(): float
+    {
+        return $this->additionalCost;
+    }
+
+    public function getDaysToSellExtra(): ?float
+    {
+        return $this->daysToSellExtra;
+    }
+
     public function getStatus(): string
     {
         return $this->status;

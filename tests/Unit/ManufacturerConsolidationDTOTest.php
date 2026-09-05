@@ -46,7 +46,7 @@ class ManufacturerConsolidationDTOTest extends TestCase
             10.0,
             new \DateTimeImmutable('2026-01-01')
         );
-        $dto->orderMultiple = 5.0;
+        $dto->setOrderMultiple(5.0);
 
         $adjusted = $dto->applyToQty(12.0);
         $this->assertEquals(15.0, $adjusted);
@@ -98,7 +98,7 @@ class ManufacturerConsolidationDTOTest extends TestCase
         );
 
         $dto->calculateAdditionalCost(10.0);
-        $this->assertEquals(250.0, $dto->additionalCost);
+        $this->assertEquals(250.0, $dto->getAdditionalCost());
     }
 
     public function testConsolidationRecommendationSetDaysToSellExtra(): void
@@ -113,7 +113,7 @@ class ManufacturerConsolidationDTOTest extends TestCase
         );
 
         $dto->setDaysToSellExtra(20.0);
-        $this->assertEquals(20.0, $dto->daysToSellExtra);
+        $this->assertEquals(20.0, $dto->getDaysToSellExtra());
         $this->assertEquals('positive', $dto->getRoiImpact());
     }
 }

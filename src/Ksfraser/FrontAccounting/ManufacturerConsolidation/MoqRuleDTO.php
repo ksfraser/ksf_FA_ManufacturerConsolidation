@@ -114,6 +114,11 @@ class MoqRuleDTO
         return $this->supplierId;
     }
 
+    public function setOrderMultiple(?float $multiple): void
+    {
+        $this->orderMultiple = $multiple;
+    }
+
     public function getMinOrderQty(): float
     {
         return $this->minOrderQty;
