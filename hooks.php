@@ -17,7 +17,7 @@ class hooks_ksf_FA_ManufacturerConsolidation extends hooks
     function install_extension($check_only=true)
     {
         if (!$check_only) {
-            \ksfraser\FrontAccounting\Common\Utils\ComposerDependencies::ensure(__DIR__);
+            \ksfraser\FrontAccounting\ManufacturerConsolidation\Utils\ComposerDependencies::ensure(__DIR__);
         }
         return true;
     }
